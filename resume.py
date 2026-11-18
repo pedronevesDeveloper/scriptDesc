@@ -15,13 +15,39 @@ NUM_CTX = 4096
 NUM_PREDICT = 150     # teto de tokens gerados por resposta
 TIMEOUT = 600         # segundos por chamada
 
-PROMPT = """Voce e um redator tecnico. Reescreva a descricao abaixo em uma ou duas frases completas em portugues, claras e coerentes, com no maximo {META} caracteres, mantendo o mesmo sentido e as ideias principais. Nao copie trechos soltos nem faca lista de palavras. Responda somente com o texto reescrito.
+# Exemplos genericos (nada do cliente). Cada par: (descricao longa, resumo bom). Para ensinar o formato
+# com casos reais, troque ou acrescente pares aqui, de tipos de perfil diferentes e com resumos de ate ~200 caracteres.
+EXEMPLOS = [
+    ('Perfil destinado aos colaboradores do almoxarifado responsaveis por receber mercadorias conferir notas fiscais registrar entradas e saidas de materiais controlar o estoque e solicitar reposicao junto ao setor de compras',
+     'Perfil do almoxarifado para receber e conferir mercadorias, registrar entradas e saidas, controlar o estoque e pedir reposicao ao setor de compras.'),
+    ('Objetivo analisar e decidir sobre solicitacoes de viagem corporativa visualizar e aprovar pedidos da equipe consultar o historico de gastos e delegar aprovacoes temporariamente com acesso restrito a unidade de Curitiba sem criar editar ou excluir solicitacoes',
+     'Aprova ou rejeita solicitacoes de viagem da equipe, consulta o historico de gastos e delega aprovacoes temporariamente, com acesso restrito a unidade de Curitiba e sem criar ou editar solicitacoes.'),
+    ('Perfil administrativo do sistema financeiro com acesso total a configuracao de usuarios licencas e integracoes e a relatorios de todas as areas sujeito a revisao semestral e a monitoramento por ser de alto risco',
+     'Administra usuarios, licencas e integracoes do sistema financeiro e acessa relatorios de todas as areas. Perfil de alto risco, sujeito a revisao semestral e monitoramento.'),
+]
 
-Texto: Perfil destinado aos colaboradores do almoxarifado responsaveis por receber mercadorias conferir notas fiscais registrar entradas e saidas de materiais controlar o estoque e solicitar reposicao junto ao setor de compras
-Resumo: Perfil do almoxarifado para receber e conferir mercadorias, registrar entradas e saidas, controlar o estoque e pedir reposicao ao setor de compras.
+PROMPT = """Voce e um redator tecnico que reescreve descricoes de perfis de acesso de sistemas corporativos para um portal de solicitacao de acesso. Quem le o texto e um solicitante que precisa decidir se pede o perfil.
+
+Tarefa: reescreva a descricao abaixo em ate {META} caracteres, em uma ou duas frases completas em portugues, claras e coerentes.
+
+Regras:
+1. Mantenha o mesmo sentido. Nao invente nenhuma informacao que nao esteja no texto.
+2. Preserve o que mais importa: para que serve o perfil, o escopo (pais, area ou empresa) e as principais restricoes, ou seja, o que o perfil nao permite.
+3. Comece direto pelo conteudo. Nao copie rotulos do texto original como Objetivo, Escopo ou Acao.
+4. Nao repita palavras em sequencia, nao copie trechos soltos e nao faca lista de palavras.
+5. Mantenha nomes de sistemas, paises e siglas como aparecem no texto.
+6. Responda somente com o texto reescrito, sem comentarios, aspas ou titulo.
+
+{EXEMPLOS}
 
 Texto: {TEXTO}
 Resumo:"""
+
+
+def _montar_prompt(texto, meta):
+    exemplos = '\n\n'.join(f'Texto: {t}\nResumo: {r}' for t, r in EXEMPLOS)
+    # {TEXTO} por ultimo, para que chaves dentro do texto nao sejam trocadas
+    return PROMPT.replace('{META}', str(meta)).replace('{EXEMPLOS}', exemplos).replace('{TEXTO}', texto)
 
 
 def _verificar_servidor():
@@ -52,7 +78,7 @@ def _resumir_um(texto, limpar):
     motivo = ''
     for t in range(1, TENTATIVAS + 1):
         meta = max(META - 40 * (t - 1), 80)
-        prompt = PROMPT.replace('{META}', str(meta)).replace('{TEXTO}', texto)
+        prompt = _montar_prompt(texto, meta)
         try:
             r = _chamar(prompt)
         except (urllib.error.URLError, OSError, ValueError) as e:
