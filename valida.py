@@ -77,7 +77,10 @@ def _gerar_pdf(caminho, arquivo, resumo, problemas):
     pdf.output(caminho)
 
 
-def validar(originais, caminho_saida):
+LIMITE = 250
+
+
+def validar(originais, caminho_saida, resumidos=()):
     """originais: lista de (nome do perfil, descricao ORIGINAL, sem limpar).
     caminho_saida: XLSX gerado pelo main.py."""
     gerado = _ler_saida(caminho_saida)
@@ -85,7 +88,7 @@ def validar(originais, caminho_saida):
     for n in gerado:
         por_chave.setdefault(_chave(n), []).append(n)
 
-    iguais = sem_desc = 0
+    iguais = sem_desc = resumidas = 0
     problemas = []
     usados = set()
     for nome, original in originais:
@@ -93,7 +96,13 @@ def validar(originais, caminho_saida):
         if nome in gerado and gerado[nome]:
             obtido = gerado[nome].pop(0)
             usados.add(nome)
-            if obtido == esperado:
+            if nome in resumidos:
+                if obtido and re.fullmatch(r'[A-Za-z0-9 ]+', obtido):
+                    resumidas += 1
+                else:
+                    problemas.append(('DIFERENTE', nome, 'a descricao resumida esta vazia ou tem caractere invalido',
+                                      f'gravado: {obtido or "(vazio)"}'))
+            elif obtido == esperado:
                 if esperado:
                     iguais += 1
                 else:
@@ -101,6 +110,8 @@ def validar(originais, caminho_saida):
             else:
                 problemas.append(('DIFERENTE', nome, 'a descricao gravada nao e a original depois da limpeza',
                                   f'esperado: {esperado or "(vazio)"} | gravado: {obtido or "(vazio)"}'))
+            if len(obtido) > LIMITE:
+                problemas.append(('ACIMA250', nome, f'descricao gravada com {len(obtido)} caracteres (limite {LIMITE})', ''))
             continue
         quase = [n for n in por_chave.get(_chave(nome), []) if n != nome]
         if nome in usados:
@@ -119,6 +130,8 @@ def validar(originais, caminho_saida):
         ('Perfis na base', len(originais)),
         ('Iguais (descricao conferida)', iguais),
         ('Iguais, sem descricao na base', sem_desc),
+        ('Resumidas pelo modelo (conferidas)', resumidas),
+        ('Acima de 250 caracteres', sum(p[0] == 'ACIMA250' for p in problemas)),
         ('Diferentes', sum(p[0] == 'DIFERENTE' for p in problemas)),
         ('Faltando na planilha gerada', sum(p[0] == 'FALTOU' for p in problemas)),
         ('Sobrando na planilha gerada', len(sobrando)),

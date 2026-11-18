@@ -1,5 +1,6 @@
 import sys, os, re, csv, io, unicodedata
 from openpyxl import Workbook, load_workbook
+from resume import resumir, adicionar_aba_revisao
 
 COLUNA_DESC = 'descricao do perfil'   # o cabecalho so precisa COMECAR com isso
 COLUNA_PERFIL = 'perfil'              # cabecalho exato da coluna com o nome completo do perfil
@@ -84,6 +85,8 @@ for l in linhas[cab + 1:]:
     resultado.append((nome, desc))
     originais.append((nome, l[i_desc]))
 
+resultado, revisao, resumidos = resumir(resultado, limpar)
+
 wb = Workbook()
 ws = wb.active
 ws.title = 'descricoes'
@@ -93,6 +96,8 @@ for nome, desc in resultado:
 ws.column_dimensions['A'].width = 50
 ws.column_dimensions['B'].width = 110
 ws.freeze_panes = 'A2'
+
+adicionar_aba_revisao(wb, revisao)
 
 saida = proximo_arquivo(os.path.dirname(os.path.abspath(entrada)))
 wb.save(saida)
@@ -107,4 +112,4 @@ for n in sorted(repetidos):
 print('Gerado:', saida)
 
 from valida import validar
-validar(originais, saida)
+validar(originais, saida, resumidos)
