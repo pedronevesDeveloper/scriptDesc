@@ -58,7 +58,7 @@ def _verificar_servidor():
     except (urllib.error.URLError, OSError, ValueError):
         return f'Ollama nao respondeu em {URL_BASE} (rode: docker start ollama)'
     if MODELO not in nomes and MODELO + ':latest' not in nomes:
-        return f'modelo {MODELO} nao esta baixado (rode: docker exec ollama ollama pull {MODELO})'
+        return f'modelo wc -l log_container.txt log_nativo.txt{MODELO} nao esta baixado (rode: docker exec ollama ollama pull {MODELO})'
     return None
 
 

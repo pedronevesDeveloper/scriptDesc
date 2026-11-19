@@ -1,6 +1,7 @@
 import sys, os, re, csv, io, unicodedata
 from openpyxl import Workbook, load_workbook
 from resume import resumir, adicionar_aba_revisao
+import instalar
 
 COLUNA_DESC = 'descricao do perfil'   # o cabecalho so precisa COMECAR com isso
 COLUNA_PERFIL = 'perfil'              # cabecalho exato da coluna com o nome completo do perfil
@@ -51,6 +52,10 @@ def achar_entrada(pasta):
         sys.exit(f'Nao achei nenhum .csv ou .xlsx em {pasta}')
     sys.exit('Achei mais de uma planilha na pasta, deixe so a base:\n  ' + '\n  '.join(cand))
 
+
+# primeiro passo: garante o Ollama instalado e rodando e o modelo baixado
+if instalar.main(silencioso=True) != 0:
+    sys.exit('Ambiente nao esta pronto. Corrija o que foi indicado acima e rode de novo.')
 
 pasta_script = os.path.dirname(os.path.abspath(__file__))
 entrada = sys.argv[1] if len(sys.argv) > 1 else achar_entrada(pasta_script)
